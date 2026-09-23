@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#09080c">
+  <meta name="description" content="Private browser-local AI character chat. No API key, no payments.">
+  <title>Cozy Chat — Asher Montclair</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand"><span>✦</span> cozy chat</div>
+      <button class="new-chat" id="newChat">＋ New conversation</button>
+      <div class="label">CHARACTER</div>
+      <div class="character-card">
+        <div class="avatar">A</div>
+        <div><strong>Asher Montclair</strong><small>Football star · 21</small></div>
+      </div>
+      <div class="label chats-label">YOUR CHATS</div>
+      <div id="chatList" class="chat-list"></div>
+      <div class="side-note">PRIVATE BY DESIGN<br><span>AI runs on your device</span></div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="icon-btn mobile-only" id="menuBtn" aria-label="Open menu">☰</button>
+        <div class="mini-avatar">A</div>
+        <div class="title-wrap"><strong>Asher Montclair</strong><span id="status">Not loaded</span></div>
+        <button class="icon-btn" id="settingsBtn" aria-label="Model settings">⚙</button>
+      </header>
+
+      <section class="messages" id="messages"></section>
+      <div class="thinking hidden" id="thinking"><span>•••</span> Asher is thinking…</div>
+
+      <div class="composer-wrap">
+        <div class="composer">
+          <textarea id="input" rows="1" placeholder="Say something…" disabled></textarea>
+          <button id="send" class="send" disabled>➤</button>
+        </div>
+        <div class="hint">Local AI · no OpenAI/Gemini API · no payment</div>
+      </div>
+    </main>
+  </div>
+
+  <div class="overlay" id="setupOverlay">
+    <div class="setup-card">
+      <div class="setup-icon">✦</div>
+      <h1 id="setupTitle">Get Asher ready</h1>
+      <p id="setupText">Choose the smaller model first. It downloads once, then your browser can reuse the cached model.</p>
+
+      <div class="model-options">
+        <button class="model-option selected" data-model="fast">
+          <div><strong>Fast start</strong><span>Qwen 0.5B · about 483 MB</span></div><b>Recommended</b>
+        </button>
+        <button class="model-option" data-model="better">
+          <div><strong>Better replies</strong><span>Qwen 1.5B · about 1.22 GB</span></div><b>More capable</b>
+        </button>
+      </div>
+
+      <div id="compat" class="compat"></div>
+      <button id="startBtn" class="primary">Check browser & start</button>
+      <button id="retryBtn" class="secondary hidden">Try again</button>
+      <div class="progress-area hidden" id="progressArea">
+        <div class="progress-row"><span id="progressText">Preparing…</span><span id="progressPct">0%</span></div>
+        <div class="progress"><div id="progressBar"></div></div>
+        <small id="progressDetail">The model stays in this browser's cache.</small>
+      </div>
+      <div class="error hidden" id="errorBox"></div>
+      <p class="tiny">First setup needs internet to download the model. After that, inference is local in your browser. Chrome on Apple Silicon is the preferred setup.</p>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="settingsOverlay">
+    <div class="setup-card small-card">
+      <button class="close" id="closeSettings">×</button>
+      <h2>Local AI settings</h2>
+      <p>Nothing is sent to OpenAI or Gemini. You can switch models and reload the local model.</p>
+      <label>Model
+        <select id="modelSelect">
+          <option value="fast">Fast — Qwen 0.5B (~483 MB)</option>
+          <option value="better">Better — Qwen 1.5B (~1.22 GB)</option>
+        </select>
+      </label>
+      <button id="reloadModel" class="primary">Load selected model</button>
+      <button id="clearCache" class="secondary">Clear saved chats</button>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
