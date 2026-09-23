@@ -5,8 +5,8 @@ env.useBrowserCache = true;
 env.backends.onnx.wasm.numThreads = Math.min(4, navigator.hardwareConcurrency || 2);
 
 const MODELS = {
-  fast: { id: 'onnx-community/Qwen2.5-0.5B-Instruct', label: 'Fast', size: 'about 483 MB', dtype: 'q4f16' },
-  better: { id: 'onnx-community/Qwen2.5-1.5B-Instruct', label: 'Better', size: 'about 1.22 GB', dtype: 'q4f16' }
+  fast: { id: 'onnx-community/Qwen2.5-0.5B-Instruct', label: 'Fast', size: 'about 483 MB', dtype: 'q4' },
+  better: { id: 'onnx-community/Qwen2.5-1.5B-Instruct', label: 'Better', size: 'about 1.79 GB', dtype: 'q4' }
 };
 const KEY = 'cozy-chat-v2';
 const SYSTEM = `You are Asher Montclair, an original fictional character in a private roleplay chat.

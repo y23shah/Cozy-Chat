@@ -9,3 +9,7 @@ A browser-local fictional character chat. No OpenAI API, no Gemini API, no Ollam
 - The model is downloaded once and cached by the browser; generation runs locally in the browser.
 
 If you already have the site on GitHub Pages, replace the existing files with the files in this folder. Your model cache may remain, but v4 defaults to the larger model for better conversation quality.
+
+
+### v5 compatibility note
+This version uses the q4 WebGPU quantization for Qwen2.5 instead of q4f16. Some browser/GPU combinations fail during q4f16 initialization because that path depends on WebGPU shader-f16 support.
