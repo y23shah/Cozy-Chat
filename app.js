@@ -1,4 +1,4 @@
-import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
+import { pipeline, env, TextStreamer } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
 
 env.allowLocalModels = false;
 env.useBrowserCache = true;
@@ -20,7 +20,7 @@ RELATIONSHIP DYNAMIC: Treat the user as the person you are talking to. Pursue th
 CONTENT: Keep romance non-explicit. Do not produce graphic sexual content. If the user asks for something explicit, keep it romantic/non-graphic and continue the scene without describing explicit sexual acts.`;
 
 let model = null;
-let selected = localStorage.getItem('cozy-model') || 'fast';
+let selected = localStorage.getItem('cozy-model') || 'better';
 let chats = JSON.parse(localStorage.getItem(KEY) || '[]');
 let currentId = null;
 let loading = false;
@@ -44,7 +44,13 @@ const status = $('status');
 const messages = $('messages');
 
 function save(){ localStorage.setItem(KEY, JSON.stringify(chats)); }
-function makeChat(){ return {id: crypto.randomUUID(), title:'New conversation', messages:[]}; }
+const STARTERS = [
+  '*Asher glances up from his phone, a lazy smirk appearing.*\n\n"You finally showed up. I was starting to think you were avoiding me."',
+  '*Asher looks over, amused.*\n\n"There you are. I was getting bored without someone to annoy."',
+  '*He leans back, eyes flicking over to you.*\n\n"You know, you could at least pretend you weren’t waiting for me to notice you."',
+  '*Asher raises a brow, looking far too entertained.*\n\n"Well? You came all the way here. Don’t just stand there looking innocent."'
+];
+function makeChat(){ return {id: crypto.randomUUID(), title:'New conversation', messages:[{role:'assistant',content:STARTERS[Math.floor(Math.random()*STARTERS.length)]}]}; }
 function current(){ return chats.find(c=>c.id===currentId); }
 function ensureChat(){ if(!currentId || !current()) { const c=makeChat(); chats.unshift(c); currentId=c.id; save(); } }
 function escapeText(s){ return String(s); }
@@ -55,10 +61,6 @@ function renderChats(){
 function renderMessages(){
   messages.innerHTML=''; ensureChat();
   const c=current();
-  if(!c.messages.length){
-    addBubble('assistant','*Asher glances up from his phone, amused.*\n\n"You finally showed up. I was starting to think you were avoiding me."',false);
-    return;
-  }
   c.messages.forEach(m=>addBubble(m.role==='user'?'user':'assistant',m.content,false));
   messages.scrollTop=messages.scrollHeight;
 }
@@ -105,25 +107,64 @@ async function loadModel(){
   } finally { loading=false; }
 }
 
+function addStreamingBubble(){
+  const row=document.createElement('div'); row.className='message assistant';
+  const bubble=document.createElement('div'); bubble.className='bubble';
+  row.appendChild(bubble); messages.appendChild(row);
+  messages.scrollTop=messages.scrollHeight;
+  return bubble;
+}
+
 async function generate(){
   if(!model || loading) return;
   const text=input.value.trim(); if(!text) return;
   input.value=''; input.style.height='auto';
   addBubble('user',text);
-  $('thinking').classList.remove('hidden'); send.disabled=true;
+  $('thinking').classList.remove('hidden'); send.disabled=true; input.disabled=true;
+  const bubble=addStreamingBubble();
+  let reply='';
   try{
     const c=current();
     const history=c.messages.slice(-12).map(m=>({role:m.role,content:m.content}));
     const prompt=[{role:'system',content:SYSTEM},...history];
-    const out=await model(prompt,{max_new_tokens:180,temperature:.88,top_p:.92,do_sample:true,return_full_text:false});
-    let reply=out?.[0]?.generated_text;
-    if(Array.isArray(reply)) reply=reply.at(-1)?.content;
-    if(typeof reply!=='string') reply='*smirks* You really do know how to keep me guessing.';
+    const streamer=new TextStreamer(model.tokenizer,{
+      skip_prompt:true,
+      skip_special_tokens:true,
+      callback_function:(chunk)=>{
+        reply += chunk;
+        bubble.textContent=reply;
+        messages.scrollTop=messages.scrollHeight;
+      }
+    });
+    await model(prompt,{max_new_tokens:110,temperature:.7,top_p:.8,top_k:20,repetition_penalty:1.1,do_sample:true,streamer});
     reply=reply.trim();
-    addBubble('assistant',reply);
+    // Guard against a tiny local model getting stuck in a repeated-token loop.
+    const words=reply.split(/\s+/);
+    if(words.length>18){
+      for(let n=2;n<=5;n++){
+        const tail=words.slice(-n).join(' ').toLowerCase();
+        let repeats=0;
+        for(let i=Math.max(0,words.length-n*10); i+n<=words.length; i+=n){
+          if(words.slice(i,i+n).join(' ').toLowerCase()===tail) repeats++;
+        }
+        if(repeats>=6){
+          reply=words.slice(0,Math.max(8,words.length-n*repeats)).join(' ');
+          break;
+        }
+      }
+    }
+    if(!reply) reply='*smirks* You really do know how to keep me guessing.';
+    bubble.textContent=reply;
+    c.messages.push({role:'assistant',content:reply});
+    save();
   }catch(err){
-    console.error(err); addBubble('assistant','*raises a brow* My brain just tripped over itself. Give me another shot.');
-  }finally{ $('thinking').classList.add('hidden'); send.disabled=false; input.focus(); }
+    console.error(err);
+    reply='*raises a brow* My brain just tripped over itself. Give me another shot.';
+    bubble.textContent=reply;
+    current().messages.push({role:'assistant',content:reply}); save();
+  }finally{
+    $('thinking').classList.add('hidden'); send.disabled=false; input.disabled=false; input.focus();
+  }
 }
 
 startBtn.onclick=()=>{ if(browserCheck()) loadModel(); };
@@ -132,7 +173,7 @@ $('send').onclick=generate;
 input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();generate();}});
 input.addEventListener('input',()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,130)+'px';});
 $('newChat').onclick=()=>{const c=makeChat();chats.unshift(c);currentId=c.id;save();renderChats();renderMessages();};
-$('clear').onclick=()=>{const c=current();if(c){c.messages=[];c.title='New conversation';save();renderChats();renderMessages();}};
+$('clear').onclick=()=>{const c=current();if(c){c.messages=[{role:'assistant',content:STARTERS[Math.floor(Math.random()*STARTERS.length)]}];c.title='New conversation';save();renderChats();renderMessages();}};
 $('menuBtn').onclick=()=>$('sidebar').classList.toggle('open');
 $('settingsBtn').onclick=()=>{$('settingsOverlay').classList.remove('hidden');$('modelSelect').value=selected;};
 $('closeSettings').onclick=()=>$('settingsOverlay').classList.add('hidden');
